@@ -1,0 +1,718 @@
+:root {
+  color-scheme: light dark;
+  --fg: #1c1c1c;
+  --bg: #fafafa;
+  --muted: #6b6b6b;
+  --accent: #e07b1e;
+  --border: #e0e0e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e8e8e8;
+    --bg: #181818;
+    --muted: #9a9a9a;
+    --accent: #ffab5e;
+    --border: #333333;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1rem 4rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Georgia, "Nanum Myeongjo", serif;
+  line-height: 1.7;
+}
+
+header {
+  max-width: 700px;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+button {
+  margin-top: 1rem;
+  padding: 0.6rem 1.4rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+main#content {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.placeholder,
+.error {
+  text-align: center;
+  color: var(--muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* --- loading skeleton --- */
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+@keyframes skeleton-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.skeleton-line,
+.skeleton-pill {
+  opacity: 0;
+  background-image: linear-gradient(
+    90deg,
+    var(--border) 25%,
+    color-mix(in srgb, var(--fg) 12%, var(--border)) 37%,
+    var(--border) 63%
+  );
+  background-size: 400% 100%;
+  border-radius: 4px;
+  animation-name: skeleton-enter, skeleton-shimmer;
+  animation-duration: 0.4s, 3.2s;
+  animation-timing-function: ease-out, linear;
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: forwards, none;
+  animation-delay: 0ms; /* overridden per bar via inline style, for the cascade */
+}
+
+.skeleton-line {
+  height: 0.9rem;
+  margin: 0.55rem 0;
+}
+
+.skeleton-title {
+  height: 1.7rem;
+  margin-bottom: 0.9rem;
+}
+
+.skeleton-meta {
+  height: 0.75rem;
+  margin-bottom: 2.2rem;
+}
+
+.skeleton-paragraph {
+  margin-bottom: 1.6rem;
+}
+
+.skeleton-vocab-heading {
+  margin-top: 2.5rem;
+}
+
+.skeleton-vocab {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.skeleton-pill {
+  height: 1.7rem;
+  border-radius: 4px;
+}
+
+article h2 {
+  margin-bottom: 0.25rem;
+}
+
+/* Speech-bubble tooltip on hover over a highlighted key-vocab word in the
+   article body -- CSS-only (attr()-driven) so it works unchanged in the
+   standalone saved-HTML export too, which has no JS. */
+.vocab-hl {
+  position: relative;
+  cursor: help;
+  text-decoration: underline solid var(--border);
+  text-underline-offset: 2px;
+}
+
+.vocab-hl::before,
+.vocab-hl::after {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 60;
+}
+
+.vocab-hl::after {
+  content: attr(data-tooltip);
+  margin-bottom: 4px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  background: var(--fg);
+  color: var(--bg);
+  font-family: -apple-system, "Malgun Gothic", sans-serif;
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.4;
+  max-width: 220px;
+  width: max-content;
+  white-space: normal;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.vocab-hl::before {
+  content: "";
+  margin-bottom: 1px;
+  border: 5px solid transparent;
+  border-top-color: var(--fg);
+}
+
+.vocab-hl:hover::before,
+.vocab-hl:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.save-link {
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.save-link:hover {
+  opacity: 0.8;
+}
+
+article h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+
+.meta a {
+  color: var(--accent);
+}
+
+section.vocab {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+section.vocab .vocab-pills {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+section.vocab .vocab-pills li {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+body.study-mode section.vocab .vocab-pills {
+  display: none;
+}
+
+.vocab-save-row {
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+}
+
+body.study-mode .vocab-save-row {
+  display: flex;
+}
+
+.vocab-save-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.vocab-study-list {
+  display: none;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+body.study-mode .vocab-study-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vocab-study-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+}
+
+.vocab-study-item .word-info {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.vocab-study-item input {
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-left: 0.4rem;
+  padding: 0.2rem 0 0.2rem 0.6rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border: none;
+  border-left: 1px solid var(--accent);
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg);
+}
+
+.vocab-study-item input:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+@media (max-width: 500px) {
+  .vocab-study-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+}
+
+section.vocab .lemma {
+  font-weight: bold;
+}
+
+section.vocab .pos {
+  color: var(--muted);
+  font-size: 0.55rem;
+}
+
+section.vocab .vocab-meaning {
+  margin-left: 0.4rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--accent);
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+
+.study-toggle {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border);
+  color: var(--fg);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  z-index: 100;
+}
+
+.study-toggle.active {
+  background: var(--accent);
+  color: white;
+}
+
+.memo-box {
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.4rem 0 1.2rem;
+  padding: 0.6rem 0.8rem;
+  border: none;
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+
+body.study-mode .memo-box {
+  display: block;
+}
+
+/* --- 단어장 (vocab list) --- */
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+}
+
+.tab-btn {
+  margin-top: 0;
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.nav-link {
+  margin: 0;
+}
+
+.nav-link a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-link a:hover {
+  text-decoration: underline;
+}
+
+.legend {
+  max-width: 500px;
+  margin: 0.8rem auto 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 1rem 0 0.6rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+#search {
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+  padding: 0.6rem 0.9rem;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.count {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.word-list {
+  list-style: none;
+  margin: 2rem auto 0;
+  padding: 0;
+  max-width: 700px;
+}
+
+.word-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.2rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.result-heading {
+  margin: 1.6rem 0 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--muted);
+}
+
+.result-heading:first-child {
+  margin-top: 0;
+}
+
+.result-count {
+  margin-left: 0.4rem;
+  font-weight: normal;
+}
+
+.headword-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.exact-badge {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 3px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: normal;
+}
+
+.word-item.nebeneintrag {
+  padding-left: 1.5rem;
+}
+
+.word-head {
+  flex: 0 0 38%;
+  max-width: 38%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.headword {
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.sep-mark {
+  color: var(--accent);
+  font-weight: normal;
+  margin: 0 0.02em;
+}
+
+.meaning-ko {
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--accent);
+  color: var(--fg);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.forms {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  column-gap: 0.7rem;
+  row-gap: 0.15rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.form-label {
+  opacity: 0.75;
+}
+
+.related {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .word-item {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .word-head {
+    max-width: 100%;
+    flex-basis: auto;
+  }
+}
+
+.word-examples {
+  flex: 1 1 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.word-examples li {
+  margin-top: 0.2rem;
+}
+
+/* --- 퀴즈 (quiz) --- */
+
+.quiz-score {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.8rem 0 0;
+}
+
+.quiz-card {
+  max-width: 600px;
+  margin: 2.5rem auto 0;
+  padding: 1.8rem 1.6rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.quiz-meaning {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 1rem;
+}
+
+.quiz-meaning strong {
+  color: var(--fg);
+}
+
+.quiz-sentence {
+  font-size: 1.2rem;
+  line-height: 1.9;
+  margin: 0 0 1.5rem;
+}
+
+.blank {
+  display: inline-block;
+  color: var(--accent);
+  font-weight: bold;
+  letter-spacing: 0.15em;
+}
+
+#quiz-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+#quiz-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.9rem;
+  font-size: 1.05rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#quiz-input:disabled {
+  opacity: 0.7;
+}
+
+.quiz-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.quiz-actions button {
+  margin-top: 0;
+}
+
+.secondary-btn {
+  margin-top: 0;
+  background: var(--border);
+  color: var(--fg);
+}
+
+#quiz-feedback {
+  margin-top: 1.2rem;
+}
+
+.quiz-result {
+  font-size: 1.05rem;
+  font-weight: bold;
+  margin: 0 0 0.3rem;
+}
+
+.quiz-result.correct {
+  color: #2e9e4f;
+}
+
+.quiz-result.incorrect {
+  color: #d1453b;
+}
+
+.quiz-answer-context {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+#next-btn {
+  margin-top: 0;
+}

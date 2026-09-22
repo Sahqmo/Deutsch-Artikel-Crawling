@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>단어장 · Deutsch Nachrichten</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>단어장</h1>
+      <p class="subtitle" id="subtitle">Goethe-Zertifikat B1 어휘 목록</p>
+      <p class="nav-link">
+        <a href="{{ url_for('index') }}">← 기사 보기</a>
+        · <a href="{{ url_for('quiz_page') }}">퀴즈 풀기 →</a>
+      </p>
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab-btn active" data-tab="b1">B1 단어</button>
+        <button type="button" class="tab-btn" data-tab="custom">추가 공부 단어</button>
+      </div>
+      <p class="legend" id="legend">
+        D·A·CH는 독일어권 표준 변이형을 뜻합니다(D = 독일, A = 오스트리아, CH =
+        스위스).<br />
+        "(A) → D, CH: X"는 오스트리아에서는 이 단어를 쓰고,<br />독일·스위스에서는
+        X를 쓴다는 뜻이에요.
+      </p>
+    </header>
+
+    <div class="search-bar" id="search-bar">
+      <input
+        id="search"
+        type="text"
+        placeholder="단어 검색..."
+        autocomplete="off"
+      />
+      <p class="count" id="count"></p>
+    </div>
+
+    <main id="content">
+      <ul id="word-list" class="word-list"></ul>
+    </main>
+
+    <script src="{{ url_for('static', filename='vocab.js') }}"></script>
+  </body>
+</html>

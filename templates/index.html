@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deutsch Nachrichten</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Deutsch Nachrichten</h1>
+    <p class="subtitle">ZDFheute 기사로 독일어 읽기 연습</p>
+    <p class="nav-link"><a href="{{ url_for('vocab_page') }}">단어장 보기 →</a></p>
+    <button id="load-btn">새 기사 보기</button>
+  </header>
+
+  <main id="content">
+    <p class="placeholder">버튼을 눌러 기사를 불러오세요.</p>
+  </main>
+
+  <button id="study-toggle" class="study-toggle" type="button" title="공부 모드" aria-pressed="false">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9"></path>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+    </svg>
+  </button>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

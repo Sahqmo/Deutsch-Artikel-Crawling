@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.bak
+
+# Personal learning data (grows locally, not app source)
+static/custom_vocab.json
+
+# Copyrighted source PDF (derived JSON is committed instead)
+Goethe-Zertifikat_B1_Wortliste.pdf
+
+# OS cruft
+Thumbs.db
+.DS_Store

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>퀴즈 · Deutsch Nachrichten</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>퀴즈</h1>
+      <p class="subtitle">예문 빈칸 채우기</p>
+      <p class="nav-link">
+        <a href="{{ url_for('vocab_page') }}">← 단어장</a>
+        · <a href="{{ url_for('index') }}">기사 보기</a>
+      </p>
+      <p class="quiz-score" id="score"></p>
+    </header>
+
+    <main id="content">
+      <section id="quiz-card" class="quiz-card">
+        <p class="placeholder" id="quiz-placeholder">불러오는 중...</p>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='quiz.js') }}"></script>
+  </body>
+</html>
