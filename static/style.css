@@ -434,6 +434,153 @@ body.study-mode .memo-box {
   color: white;
 }
 
+/* Navigates to a different page (my-vocab), unlike the same-page .tab-btn
+   toggles -- kept as its own class so vocab.js's ".tab-btn" tab-switching
+   listener doesn't attach to it. */
+.tab-link {
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tab-link:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.add-tab-btn {
+  font-weight: 700;
+}
+
+.custom-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.custom-tab-remove {
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 0.9em;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.custom-tab-remove:hover {
+  opacity: 1;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-box {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 380px;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.modal-box h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.modal-label {
+  margin: 1rem 0 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.modal-box input[type="text"] {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.modal-file-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.modal-file-row .secondary-btn {
+  margin-top: 0;
+}
+
+.loaded-file-name {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.modal-actions button {
+  flex: 1;
+  margin-top: 0;
+}
+
+.saved-articles-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.saved-articles-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.saved-articles-list a {
+  display: block;
+  padding: 0.6rem 0.2rem;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.saved-articles-list a:hover {
+  color: var(--accent);
+}
+
+.saved-articles-list .saved-date {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
 .nav-link {
   margin: 0;
 }
@@ -609,7 +756,152 @@ body.study-mode .memo-box {
 }
 
 .word-examples li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
   margin-top: 0.2rem;
+}
+
+.example-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.delete-example-btn {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.9em;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.delete-example-btn:hover {
+  opacity: 1;
+  color: #d1453b;
+}
+
+/* --- 단어 직접 추가 (custom words) --- */
+
+#add-word-btn {
+  display: block;
+  margin: 1rem auto 0;
+}
+
+.word-item.editing {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+
+.edit-headword,
+.edit-pos,
+.edit-meaning,
+.edit-forms input,
+.edit-examples {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.edit-meaning,
+.edit-examples {
+  resize: vertical;
+}
+
+.edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.edit-pos {
+  width: auto;
+  max-width: 160px;
+}
+
+.edit-forms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+/* `display: grid` above is an author-stylesheet rule, which otherwise beats
+   the browser's own `[hidden] { display: none }` UA rule regardless of
+   selector specificity -- without this, the hidden attribute JS sets
+   stopped actually hiding the element. */
+.edit-forms[hidden] {
+  display: none;
+}
+
+.dup-notice {
+  color: var(--accent);
+  font-size: 0.82rem;
+}
+
+.save-error {
+  color: #d1453b;
+  font-size: 0.85rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.edit-actions button {
+  margin-top: 0;
+}
+
+.word-pos-tag {
+  color: var(--muted);
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+
+.word-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.edit-word-btn,
+.delete-word-btn {
+  margin-top: 0;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.edit-word-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.delete-word-btn:hover {
+  border-color: #d1453b;
+  color: #d1453b;
+}
+
+@media (max-width: 500px) {
+  .edit-forms {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* --- 퀴즈 (quiz) --- */

@@ -7,21 +7,27 @@ text extraction reads all headwords in a half before all examples in that half, 
 this script works from block-level bounding boxes (pymupdf) instead, matching each
 headword to its example(s) by vertical position.
 
-Usage: python parse_b1_wortliste.py
-Output: goethe_b1_wortliste.json
+Usage: python scripts/parse_b1_wortliste.py
+Output: static/goethe_b1_wortliste.json
 """
 
 import json
 import re
 import sys
+from pathlib import Path
 
 import pymupdf
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from wordforms import bare_candidate_words
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-SRC = "Goethe-Zertifikat_B1_Wortliste.pdf"
-OUT = "static/goethe_b1_wortliste.json"  # served directly by Flask's static route
+SRC = ROOT / "data" / "Goethe-Zertifikat_B1_Wortliste.pdf"
+OUT = ROOT / "static" / "goethe_b1_wortliste.json"  # served directly by Flask's static route
 FIRST_PAGE = 16  # 1-indexed, inclusive
 LAST_PAGE = 102  # 1-indexed, inclusive
 
@@ -513,6 +519,12 @@ def main():
                 entries.append(entry)
 
     entries = apply_manual_fixes(entries)
+
+    # Precomputed so static/vocab.js can exact-match search without
+    # reimplementing extract_exact_candidates()'s regex rules in JS -- see
+    # wordforms.py's module docstring.
+    for entry in entries:
+        entry["exact_candidates"] = bare_candidate_words(entry["headword"])
 
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(entries, f, ensure_ascii=False, indent=2)

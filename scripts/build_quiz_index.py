@@ -11,7 +11,7 @@ the lemmatizer mis-tags, a bound prefix like "Elektro-" that never appears as
 its own token, etc.) is silently skipped rather than shipped as a
 broken/unanswerable question.
 
-Usage: python build_quiz_index.py
+Usage: python scripts/build_quiz_index.py
 Output: static/quiz_index.json
 """
 
@@ -22,13 +22,16 @@ from pathlib import Path
 
 import spacy
 
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 from vocab import _effective_lemma, _separable_particle
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-WORTLISTE_PATH = Path("static/goethe_b1_wortliste.json")
-OUTPUT_PATH = Path("static/quiz_index.json")
+WORTLISTE_PATH = ROOT / "static" / "goethe_b1_wortliste.json"
+OUTPUT_PATH = ROOT / "static" / "quiz_index.json"
 
 # Mirrors static/vocab.js's extractExactCandidates(): strip the leading
 # article and any parenthetical/cross-reference note to get the bare

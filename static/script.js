@@ -1,8 +1,54 @@
 const btn = document.getElementById("load-btn");
 const content = document.getElementById("content");
 const studyToggle = document.getElementById("study-toggle");
+const loadSavedBtn = document.getElementById("load-saved-btn");
+const savedArticlesOverlay = document.getElementById("saved-articles-overlay");
+const savedArticlesList = document.getElementById("saved-articles-list");
+const savedArticlesEmpty = document.getElementById("saved-articles-empty");
+const closeSavedOverlayBtn = document.getElementById("close-saved-overlay-btn");
 
 let currentArticle = null;
+
+loadSavedBtn.addEventListener("click", openSavedArticlesOverlay);
+closeSavedOverlayBtn.addEventListener("click", closeSavedArticlesOverlay);
+savedArticlesOverlay.addEventListener("click", (event) => {
+  if (event.target === savedArticlesOverlay) closeSavedArticlesOverlay();
+});
+
+async function openSavedArticlesOverlay() {
+  savedArticlesOverlay.hidden = false;
+  savedArticlesList.innerHTML = "";
+  savedArticlesEmpty.hidden = true;
+
+  try {
+    const res = await fetch("/api/saved-articles");
+    const articles = await res.json();
+    if (!res.ok) throw new Error(articles.error || "목록을 불러오지 못했습니다.");
+
+    if (articles.length === 0) {
+      savedArticlesEmpty.hidden = false;
+      return;
+    }
+
+    savedArticlesList.innerHTML = articles
+      .map(
+        (a) => `
+        <li>
+          <a href="/gespeicherte-artikel/${encodeURIComponent(a.filename)}">
+            <span class="saved-date">${escapeHtml(a.date)}</span>${escapeHtml(a.title)}
+          </a>
+        </li>
+      `
+      )
+      .join("");
+  } catch (err) {
+    savedArticlesList.innerHTML = `<li class="error">오류: ${escapeHtml(err.message)}</li>`;
+  }
+}
+
+function closeSavedArticlesOverlay() {
+  savedArticlesOverlay.hidden = true;
+}
 
 studyToggle.addEventListener("click", () => {
   const active = document.body.classList.toggle("study-mode");
@@ -107,7 +153,8 @@ function renderArticle(data) {
       <h2>${escapeHtml(data.title)}</h2>
       <p class="meta">
         <a href="${data.url}" target="_blank" rel="noopener">원문 보기</a> ·
-        <button type="button" id="save-link" class="save-link">저장</button> ·
+        <button type="button" id="save-link" class="save-link">저장</button>
+        <span id="save-status" class="vocab-save-status"></span> ·
         ${escapeHtml(data.published)}
       </p>
       ${buildBodyHtml(data.blocks, { editable: true })}
@@ -228,7 +275,10 @@ function buildVocabStudyHtml(vocab) {
 }
 
 // Reads the lemma/pos back from the DOM (rather than a data-* attribute)
-// so nothing needs a second, attribute-safe escaping pass.
+// so nothing needs a second, attribute-safe escaping pass. The example
+// sentence, though, comes straight from currentArticle.vocab (it's never
+// rendered into the DOM) -- vocab.py stamps every pick with the sentence it
+// first appeared in, so a newly-saved word gets a real in-context example.
 function collectVocabStudyEntries() {
   const items = [];
   content.querySelectorAll(".vocab-study-item").forEach((li) => {
@@ -236,10 +286,16 @@ function collectVocabStudyEntries() {
     if (input.disabled) return; // already has an authoritative B1 meaning
     const meaning = input.value.trim();
     if (!meaning) return;
+    const headword = li.querySelector(".lemma").textContent.trim();
+    const pos = li.querySelector(".pos").textContent.trim();
+    const source = currentArticle
+      ? currentArticle.vocab.find((v) => vocabDisplayLemma(v) === headword && v.pos === pos)
+      : null;
     items.push({
-      headword: li.querySelector(".lemma").textContent.trim(),
-      pos: li.querySelector(".pos").textContent.trim(),
+      headword,
+      pos,
       meaning_ko: meaning,
+      example: source ? source.example || "" : "",
     });
   });
   return items;
@@ -308,19 +364,27 @@ function applySavedMeanings(items) {
   });
 }
 
-function saveArticleAsHtml(data) {
+// Saves straight into the "gespeicherte Artikel" folder on the server
+// (rather than a browser download the user then has to move there by hand).
+async function saveArticleAsHtml(data) {
+  const statusEl = document.getElementById("save-status");
   const memos = collectMemos();
   const html = buildStandaloneHtml(data, memos);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+  const filename = `${slugifyFilename(data.title)}.html`;
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${slugifyFilename(data.title)}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (statusEl) statusEl.textContent = " 저장 중...";
+  try {
+    const res = await fetch("/api/save-article", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, html }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || "저장 실패");
+    if (statusEl) statusEl.textContent = ` 저장됨: ${result.filename}`;
+  } catch (err) {
+    if (statusEl) statusEl.textContent = ` 오류: ${err.message}`;
+  }
 }
 
 function buildStandaloneHtml(data, memos = {}) {
@@ -364,10 +428,14 @@ function buildStandaloneHtml(data, memos = {}) {
                       white-space:normal; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
   .vocab-hl::before { content:""; margin-bottom:1px; border:5px solid transparent; border-top-color:var(--fg); }
   .vocab-hl:hover::before, .vocab-hl:hover::after { opacity:1; visibility:visible; }
+  .back-home { margin:0 0 1.5rem; }
+  .back-home a { color:var(--accent); font-size:0.9rem; text-decoration:none; }
+  .back-home a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
   <main>
+    <p class="back-home"><a href="/">← 메인 화면으로</a></p>
     <article>
       <h2>${escapeHtml(data.title)}</h2>
       <p class="meta"><a href="${data.url}" target="_blank" rel="noopener">원문 보기</a> · ${escapeHtml(data.published)}</p>

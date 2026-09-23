@@ -5,9 +5,11 @@ __pycache__/
 
 # Personal learning data (grows locally, not app source)
 static/custom_vocab.json
+static/custom_ext_vocab.json
+gespeicherte Artikel/
 
 # Copyrighted source PDF (derived JSON is committed instead)
-Goethe-Zertifikat_B1_Wortliste.pdf
+data/Goethe-Zertifikat_B1_Wortliste.pdf
 
 # OS cruft
 Thumbs.db

@@ -3,19 +3,43 @@ const listEl = document.getElementById("word-list");
 const countEl = document.getElementById("count");
 const legendEl = document.getElementById("legend");
 const subtitleEl = document.getElementById("subtitle");
-const tabButtons = document.querySelectorAll(".tab-btn");
+const tabsEl = document.getElementById("tabs");
+const addTabBtn = document.getElementById("add-tab-btn");
+
+const newTabOverlay = document.getElementById("new-tab-overlay");
+const newTabNameInput = document.getElementById("new-tab-name");
+const loadJsonBtn = document.getElementById("load-json-btn");
+const jsonFileInput = document.getElementById("json-file-input");
+const loadedFileNameEl = document.getElementById("loaded-file-name");
+const newTabError = document.getElementById("new-tab-error");
+const createTabBtn = document.getElementById("create-tab-btn");
+const cancelTabBtn = document.getElementById("cancel-tab-btn");
 
 const TAB_INFO = {
   b1: { subtitle: "Goethe-Zertifikat B1 어휘 목록", showLegend: true },
   custom: { subtitle: "기사 공부 모드에서 직접 추가한 단어", showLegend: false },
 };
 
+// User-created tabs (name + word list, loaded from a local JSON file) persist
+// in localStorage since this app has no backend DB -- see custom tab section
+// below for load/save/render.
+const CUSTOM_TABS_KEY = "vocabCustomTabs";
+
 let b1Words = [];
 let customWords = [];
+let customTabs = [];
 let currentTab = "b1";
+let pendingJsonWords = null;
+
+function findCustomTab(id) {
+  return customTabs.find((t) => t.id === id);
+}
 
 function activeWords() {
-  return currentTab === "b1" ? b1Words : customWords;
+  if (currentTab === "b1") return b1Words;
+  if (currentTab === "custom") return customWords;
+  const tab = findCustomTab(currentTab);
+  return tab ? tab.words : [];
 }
 
 // Accepts the standard ASCII-keyboard spellings for umlauts/eszett (ae/oe/ue/ss)
@@ -36,7 +60,13 @@ function indexWords(list) {
     );
     w._exampleSearch = normalizeUmlauts((w.examples || []).join(" ").toLowerCase());
     w._meaningSearch = normalizeUmlauts((w.meaning_ko || "").toLowerCase());
-    w._exactSet = new Set(extractExactCandidates(w.headword).map(normalizeForExactMatch));
+    // exact_candidates is precomputed Python-side (wordforms.py) for entries
+    // that came from the B1 Wortliste or a study-mode save -- reusing it here
+    // instead of re-deriving it in JS keeps the two sides from drifting apart
+    // if the extraction rules ever change. A hand-loaded custom-tab JSON (see
+    // the "+" tab button) won't have it, so fall back to the bare headword.
+    const candidates = w.exact_candidates || (w.headword ? [w.headword] : []);
+    w._exactSet = new Set(candidates.map(normalizeForExactMatch));
   });
 }
 
@@ -51,75 +81,167 @@ async function init() {
     customWords = customRes.ok ? await customRes.json() : [];
     indexWords(b1Words);
     indexWords(customWords);
+
+    customTabs = loadCustomTabs();
+    customTabs.forEach((t) => indexWords(t.words));
+    renderCustomTabButtons();
+
     render(activeWords());
   } catch (err) {
     listEl.innerHTML = `<li class="placeholder">단어를 불러오지 못했습니다: ${escapeHtml(err.message)}</li>`;
   }
 }
 
-tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    if (btn.dataset.tab === currentTab) return;
-    currentTab = btn.dataset.tab;
-    tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
+function switchTab(tabKey) {
+  if (tabKey === currentTab) return;
+  currentTab = tabKey;
+  tabsEl
+    .querySelectorAll(".tab-btn")
+    .forEach((b) => b.classList.toggle("active", b.dataset.tab === tabKey));
 
-    const info = TAB_INFO[currentTab];
-    if (subtitleEl && info) subtitleEl.textContent = info.subtitle;
-    if (legendEl && info) legendEl.style.display = info.showLegend ? "" : "none";
+  const info = TAB_INFO[tabKey];
+  const custom = findCustomTab(tabKey);
+  if (subtitleEl) subtitleEl.textContent = info ? info.subtitle : custom ? custom.name : "";
+  if (legendEl) legendEl.style.display = info && info.showLegend ? "" : "none";
 
-    searchInput.value = "";
-    render(activeWords());
-  });
+  searchInput.value = "";
+  render(activeWords());
+}
+
+tabsEl.addEventListener("click", (event) => {
+  const removeBtn = event.target.closest(".custom-tab-remove");
+  if (removeBtn) {
+    removeCustomTab(removeBtn.dataset.tabId);
+    return;
+  }
+
+  const btn = event.target.closest(".tab-btn");
+  if (!btn) return;
+  if (btn.id === "add-tab-btn") {
+    openNewTabModal();
+    return;
+  }
+  switchTab(btn.dataset.tab);
 });
 
-// Reduce a headword to its bare, comparable word form(s) so a search term can
-// be checked for an *exact* match. For nouns this strips the leading article
-// (der/die/das, incl. "der*die"/"die/das" combos) and the plural-marker /
-// regional-note tail; gender-pair nouns ("der Lehrer, die Lehrerin, -nen")
-// yield one candidate per noun. Non-noun headwords (verbs, adjectives,
-// prefixes) fall back to their comma-separated segments.
-function extractExactCandidates(headword) {
-  let s = headword.replace(/\([^)]*\)/g, " "); // drop parenthetical notes
-  s = s.split("→")[0].trim(); // drop "→ ..." cross-reference tail
+// --- Custom tabs (user-created, JSON-loaded, persisted in localStorage) ---
 
-  const candidates = [];
-  const articleRe = /\b(?:der|die|das)\s+([A-ZÄÖÜ][^\s,;()/]*)/g;
-  let m;
-  while ((m = articleRe.exec(s))) {
-    candidates.push(m[1]);
+function loadCustomTabs() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_TABS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
-
-  if (candidates.length === 0) {
-    s.split(",").forEach((seg) => {
-      seg = seg.trim();
-      if (seg) candidates.push(seg);
-    });
-  }
-
-  // Alternate spellings joined directly by "/" (e.g. "Glace/Glacé",
-  // "Nord-/Ostsee") stop the article regex above at the "/", which is what
-  // keeps it from gluing onto an adjacent "der/die/das ..." clause (e.g.
-  // "Hausfrau/der Hausmann"). Add both sides here, unless one of them is
-  // itself an article (which means the "/" was separating two clauses,
-  // not two spellings of the same word).
-  const slashPairRe = /([^\s,;()/]+)\/([^\s,;()/]+)/g;
-  while ((m = slashPairRe.exec(s))) {
-    const left = m[1];
-    const right = m[2];
-    if (!/^(der|die|das)$/i.test(left) && !/^(der|die|das)$/i.test(right)) {
-      candidates.push(left, right);
-    }
-  }
-
-  const expanded = [];
-  candidates.forEach((c) => {
-    c.split("/").forEach((part) => {
-      part = part.trim();
-      if (part) expanded.push(part);
-    });
-  });
-  return expanded;
 }
+
+function saveCustomTabs() {
+  try {
+    localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(customTabs));
+  } catch (err) {
+    alert(`탭을 저장하지 못했습니다: ${err.message}`);
+  }
+}
+
+function renderCustomTabButtons() {
+  tabsEl.querySelectorAll(".custom-tab-btn").forEach((el) => el.remove());
+  customTabs.forEach((tab) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-btn custom-tab-btn" + (currentTab === tab.id ? " active" : "");
+    btn.dataset.tab = tab.id;
+    btn.innerHTML = `<span>${escapeHtml(tab.name)}</span><span class="custom-tab-remove" data-tab-id="${tab.id}" title="탭 삭제">×</span>`;
+    tabsEl.insertBefore(btn, addTabBtn);
+  });
+}
+
+function removeCustomTab(id) {
+  const tab = findCustomTab(id);
+  if (!tab) return;
+  if (!confirm(`"${tab.name}" 탭을 삭제할까요?`)) return;
+  customTabs = customTabs.filter((t) => t.id !== id);
+  saveCustomTabs();
+  renderCustomTabButtons();
+  if (currentTab === id) switchTab("b1");
+}
+
+function openNewTabModal() {
+  newTabNameInput.value = "";
+  jsonFileInput.value = "";
+  loadedFileNameEl.textContent = "";
+  newTabError.hidden = true;
+  pendingJsonWords = null;
+  newTabOverlay.hidden = false;
+  newTabNameInput.focus();
+}
+
+function closeNewTabModal() {
+  newTabOverlay.hidden = true;
+}
+
+cancelTabBtn.addEventListener("click", closeNewTabModal);
+
+newTabOverlay.addEventListener("click", (event) => {
+  if (event.target === newTabOverlay) closeNewTabModal();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !newTabOverlay.hidden) closeNewTabModal();
+});
+
+loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
+
+jsonFileInput.addEventListener("change", () => {
+  const file = jsonFileInput.files[0];
+  if (!file) return;
+
+  newTabError.hidden = true;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) {
+        throw new Error("최상위가 배열(JSON list) 형태여야 합니다.");
+      }
+      pendingJsonWords = data;
+      loadedFileNameEl.textContent = `${file.name} (${data.length.toLocaleString()}개 항목)`;
+    } catch (err) {
+      pendingJsonWords = null;
+      loadedFileNameEl.textContent = "";
+      newTabError.textContent = `JSON을 읽지 못했습니다: ${err.message}`;
+      newTabError.hidden = false;
+    }
+  };
+  reader.onerror = () => {
+    newTabError.textContent = "파일을 읽지 못했습니다.";
+    newTabError.hidden = false;
+  };
+  reader.readAsText(file, "utf-8");
+});
+
+createTabBtn.addEventListener("click", () => {
+  const name = newTabNameInput.value.trim();
+  if (!name) {
+    newTabError.textContent = "탭 이름을 입력해주세요.";
+    newTabError.hidden = false;
+    return;
+  }
+  if (!pendingJsonWords) {
+    newTabError.textContent = "JSON 파일을 먼저 불러와주세요.";
+    newTabError.hidden = false;
+    return;
+  }
+
+  const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const tab = { id, name, words: pendingJsonWords };
+  indexWords(tab.words);
+  customTabs.push(tab);
+  saveCustomTabs();
+  renderCustomTabButtons();
+  closeNewTabModal();
+  switchTab(id);
+});
 
 function normalizeForExactMatch(str) {
   return normalizeUmlauts(str.trim().toLowerCase().replace(/^-+|-+$/g, ""));
@@ -241,8 +363,18 @@ function renderItem(w, isExact) {
     ? `<span class="meaning-ko">${escapeHtml(w.meaning_ko)}</span>`
     : "";
 
+  // Only the "기사 공부 단어" tab's examples are deletable -- they're the
+  // auto-captured first-occurrence sentence from an article (see vocab.py's
+  // annotate()), which the player might not like, unlike the B1 Wortliste's
+  // official examples.
+  const canDeleteExample = currentTab === "custom";
   const examples = (w.examples || [])
-    .map((ex) => `<li>${escapeHtml(ex)}</li>`)
+    .map((ex) => {
+      const deleteBtn = canDeleteExample
+        ? `<button type="button" class="delete-example-btn" data-headword="${escapeAttr(w.headword)}" data-pos="${escapeAttr(w.pos)}" title="예문 삭제">×</button>`
+        : "";
+      return `<li><span class="example-text">${escapeHtml(ex)}</span>${deleteBtn}</li>`;
+    })
     .join("");
   const examplesHtml = examples ? `<ul class="word-examples">${examples}</ul>` : "";
 
@@ -266,6 +398,42 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+// escapeHtml() alone is safe inside text content but not inside a
+// value="..." attribute, since it doesn't escape quotes.
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, "&quot;");
+}
+
+listEl.addEventListener("click", (event) => {
+  const btn = event.target.closest(".delete-example-btn");
+  if (btn) deleteCustomExample(btn);
+});
+
+async function deleteCustomExample(btn) {
+  if (!confirm("이 단어의 예문을 삭제할까요?")) return;
+  const { headword, pos } = btn.dataset;
+  btn.disabled = true;
+  try {
+    const params = new URLSearchParams({ headword, pos });
+    const res = await fetch(`/api/custom-vocab/example?${params}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "삭제 실패");
+
+    const entry = customWords.find((w) => w.headword === headword && w.pos === pos);
+    if (entry) {
+      entry.examples = [];
+      entry._exampleSearch = "";
+    }
+    // Removed in place (rather than a full re-render) so an active search
+    // query/scroll position isn't disturbed by an unrelated list rebuild.
+    const examplesEl = btn.closest(".word-examples");
+    if (examplesEl) examplesEl.remove();
+  } catch (err) {
+    alert(err.message);
+    btn.disabled = false;
+  }
 }
 
 init();

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>단어장 · Deutsch Nachrichten</title>
+    <title>단어장 · Deutsch Artikel</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
@@ -19,7 +19,9 @@
       </p>
       <div class="tabs" id="tabs">
         <button type="button" class="tab-btn active" data-tab="b1">B1 단어</button>
-        <button type="button" class="tab-btn" data-tab="custom">추가 공부 단어</button>
+        <button type="button" class="tab-btn" data-tab="custom">기사 공부 단어</button>
+        <button type="button" id="add-tab-btn" class="tab-btn add-tab-btn" title="새 탭 만들기">+</button>
+        <a href="{{ url_for('my_vocab_page') }}" class="tab-link">추가 공부 단어</a>
       </div>
       <p class="legend" id="legend">
         D·A·CH는 독일어권 표준 변이형을 뜻합니다(D = 독일, A = 오스트리아, CH =
@@ -42,6 +44,29 @@
     <main id="content">
       <ul id="word-list" class="word-list"></ul>
     </main>
+
+    <div class="modal-overlay" id="new-tab-overlay" hidden>
+      <div class="modal-box">
+        <h2>새 탭 만들기</h2>
+
+        <label class="modal-label" for="new-tab-name">탭 이름</label>
+        <input type="text" id="new-tab-name" placeholder="예: 형용사 B1 (Netzverb)" autocomplete="off" />
+
+        <label class="modal-label">단어 목록 (JSON)</label>
+        <div class="modal-file-row">
+          <button type="button" id="load-json-btn" class="secondary-btn">JSON 불러오기</button>
+          <span class="loaded-file-name" id="loaded-file-name"></span>
+        </div>
+        <input type="file" id="json-file-input" accept="application/json,.json" hidden />
+
+        <span class="save-error" id="new-tab-error" hidden></span>
+
+        <div class="modal-actions">
+          <button type="button" id="create-tab-btn">생성</button>
+          <button type="button" id="cancel-tab-btn" class="secondary-btn">취소</button>
+        </div>
+      </div>
+    </div>
 
     <script src="{{ url_for('static', filename='vocab.js') }}"></script>
   </body>

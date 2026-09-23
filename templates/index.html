@@ -3,20 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Deutsch Nachrichten</title>
+  <title>Deutsch Artikel</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <header>
-    <h1>Deutsch Nachrichten</h1>
+    <h1>Deutsch Artikel</h1>
     <p class="subtitle">ZDFheute 기사로 독일어 읽기 연습</p>
-    <p class="nav-link"><a href="{{ url_for('vocab_page') }}">단어장 보기 →</a></p>
+    <p class="nav-link">
+      <a href="{{ url_for('vocab_page') }}">단어장 보기</a>
+      · <a href="{{ url_for('my_vocab_page') }}">단어 직접 추가 →</a>
+    </p>
     <button id="load-btn">새 기사 보기</button>
+    <button id="load-saved-btn" type="button" class="secondary-btn">공부한 기사 불러오기</button>
   </header>
 
   <main id="content">
     <p class="placeholder">버튼을 눌러 기사를 불러오세요.</p>
   </main>
+
+  <div class="modal-overlay" id="saved-articles-overlay" hidden>
+    <div class="modal-box">
+      <h2>공부한 기사 불러오기</h2>
+      <ul id="saved-articles-list" class="saved-articles-list"></ul>
+      <p class="placeholder" id="saved-articles-empty" hidden>저장된 기사가 없습니다.</p>
+      <div class="modal-actions">
+        <button type="button" id="close-saved-overlay-btn" class="secondary-btn">닫기</button>
+      </div>
+    </div>
+  </div>
 
   <button id="study-toggle" class="study-toggle" type="button" title="공부 모드" aria-pressed="false">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

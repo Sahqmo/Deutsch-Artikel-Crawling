@@ -1,8 +1,9 @@
 import json
 import os
-import re
 
 import spacy
+
+from wordforms import extract_exact_candidates, normalize_for_exact_match
 
 _nlp = None
 
@@ -15,12 +16,23 @@ POS_LABELS = {
 _WORTLISTE_PATH = os.path.join(os.path.dirname(__file__), "static", "goethe_b1_wortliste.json")
 _CUSTOM_VOCAB_PATH = os.path.join(os.path.dirname(__file__), "static", "custom_vocab.json")
 
-_PAREN_RE = re.compile(r"\([^)]*\)")
-_ARTICLE_RE = re.compile(r"\b(der|die|das)\s+([A-ZÄÖÜ][^\s,;()/]*)")
-_SLASH_PAIR_RE = re.compile(r"([^\s,;()/]+)/([^\s,;()/]+)")
-_ARTICLE_WORD_RE = re.compile(r"^(der|die|das)$", re.IGNORECASE)
-
 _meaning_lookup = None
+
+# German nouns are always capitalized while verbs/adjectives are not, so the
+# same bare spelling can be a real homonym across POS ("das Unternehmen" the
+# company vs. "unternehmen" to undertake) -- meaning lookups are bucketed by
+# this category (derived from an article for nouns, present_3sg for verbs, and
+# everything else falls to OTHER) so a noun token never picks up a verb's
+# meaning, or vice versa.
+_CAT_NOUN, _CAT_VERB, _CAT_OTHER = "NOUN", "VERB", "OTHER"
+
+
+def _token_category(pos_: str) -> str:
+    if pos_ == "NOUN":
+        return _CAT_NOUN
+    if pos_ == "VERB":
+        return _CAT_VERB
+    return _CAT_OTHER
 
 
 def _get_nlp():
@@ -30,46 +42,8 @@ def _get_nlp():
     return _nlp
 
 
-def _extract_exact_candidates(headword: str) -> list[tuple[str, str | None]]:
-    """Reduce a Wortliste headword to its bare, comparable word form(s), the
-    same way static/vocab.js's extractExactCandidates() does for the /vocab
-    search -- strips articles, plural-marker/regional-note tails, and splits
-    gender pairs and slash-joined alternate spellings into separate
-    candidates, so this stays in sync with what a user can exact-match there.
-    Each candidate carries the article it was found under ("der"/"die"/"das"),
-    or None when the headword had none (verbs, adjectives, slash-pair halves
-    that weren't captured directly after an article).
-    """
-    s = _PAREN_RE.sub(" ", headword)
-    s = s.split("→")[0].strip()
-
-    candidates: list[tuple[str, str | None]] = []
-    candidates.extend((m.group(2), m.group(1).lower()) for m in _ARTICLE_RE.finditer(s))
-
-    if not candidates:
-        candidates.extend((seg.strip(), None) for seg in s.split(",") if seg.strip())
-
-    for m in _SLASH_PAIR_RE.finditer(s):
-        left, right = m.group(1), m.group(2)
-        if not _ARTICLE_WORD_RE.match(left) and not _ARTICLE_WORD_RE.match(right):
-            candidates.append((left, None))
-            candidates.append((right, None))
-
-    expanded = []
-    for word, article in candidates:
-        for part in word.split("/"):
-            part = part.strip()
-            if part:
-                expanded.append((part, article))
-    return expanded
-
-
-def _normalize_for_exact_match(s: str) -> str:
-    return s.strip().lower().strip("-")
-
-
-def _get_meaning_lookup() -> dict[str, dict]:
-    """Bare-word (lowercased) -> {"meaning": ..., "artikel": "der"/"die"/"das"/None},
+def _get_meaning_lookup() -> dict[tuple[str, str], dict]:
+    """(bare word lowercased, POS category) -> {"meaning": ..., "artikel": "der"/"die"/"das"/None},
     built once from the B1 Wortliste. Used to show a translation (and, for
     nouns, the article) on article vocab picks that happen to also be B1
     words -- most picks won't be, since the article selection targets
@@ -83,27 +57,32 @@ def _get_meaning_lookup() -> dict[str, dict]:
             meaning = entry.get("meaning_ko")
             if not meaning:
                 continue
-            for word, article in _extract_exact_candidates(entry["headword"]):
-                key = _normalize_for_exact_match(word)
-                if key and key not in _meaning_lookup:
+            is_verb_entry = "present_3sg" in entry
+            for word, article in extract_exact_candidates(entry["headword"]):
+                category = _CAT_NOUN if article else (_CAT_VERB if is_verb_entry else _CAT_OTHER)
+                key = (normalize_for_exact_match(word), category)
+                if key[0] and key not in _meaning_lookup:
                     _meaning_lookup[key] = {"meaning": meaning, "artikel": article}
     return _meaning_lookup
 
 
-def _get_custom_vocab_lookup() -> dict[str, str]:
-    """Bare-word (lowercased) -> Korean meaning, from words the player has
-    already saved via study mode on a previous article. Reloaded on every
-    call (unlike the B1 lookup, which never changes at runtime) since this
-    file keeps growing for as long as the server stays up."""
+def _get_custom_vocab_lookup() -> dict[tuple[str, str], str]:
+    """(bare word lowercased, POS category) -> Korean meaning, from words the
+    player has already saved via study mode on a previous article. Reloaded
+    on every call (unlike the B1 lookup, which never changes at runtime)
+    since this file keeps growing for as long as the server stays up."""
     if not os.path.exists(_CUSTOM_VOCAB_PATH):
         return {}
     with open(_CUSTOM_VOCAB_PATH, encoding="utf-8") as f:
         entries = json.load(f)
-    return {
-        entry["headword"].strip().lower(): entry["meaning_ko"]
-        for entry in entries
-        if entry.get("headword") and entry.get("meaning_ko")
-    }
+    lookup = {}
+    for entry in entries:
+        headword, meaning, pos = entry.get("headword"), entry.get("meaning_ko"), entry.get("pos")
+        if not headword or not meaning or not pos:
+            continue
+        category = {"명사": _CAT_NOUN, "동사": _CAT_VERB}.get(pos, _CAT_OTHER)
+        lookup[(headword.strip().lower(), category)] = meaning
+    return lookup
 
 
 def _is_vocab_token(token) -> bool:
@@ -207,8 +186,14 @@ def annotate(blocks: list[dict], max_words: int = 25) -> tuple[list[dict], list[
             entry = {
                 "lemma": lemma,
                 "pos": POS_LABELS[token.pos_],
+                # The sentence this word is first picked from -- the frontend
+                # sends it back on save so a non-B1 word saved to the custom
+                # vocab list gets a real in-context example for free, instead
+                # of study mode having no way to add one at all.
+                "example": token.sent.text.strip(),
             }
-            info = meaning_lookup.get(lemma.lower())
+            category = _token_category(token.pos_)
+            info = meaning_lookup.get((lemma.lower(), category))
             if info:
                 # A B1 Wortliste meaning is authoritative -- the frontend
                 # locks these from editing. A custom-vocab meaning is the
@@ -218,7 +203,7 @@ def annotate(blocks: list[dict], max_words: int = 25) -> tuple[list[dict], list[
                 if token.pos_ == "NOUN" and info["artikel"]:
                     entry["artikel"] = info["artikel"]
             else:
-                custom_meaning = custom_lookup.get(lemma.lower())
+                custom_meaning = custom_lookup.get((lemma.lower(), category))
                 if custom_meaning:
                     entry["meaning_ko"] = custom_meaning
             vocab[key] = entry

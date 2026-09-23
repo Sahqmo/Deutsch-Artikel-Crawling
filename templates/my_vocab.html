@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>단어 추가 · Deutsch Artikel</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>직접 추가한 단어</h1>
+      <p class="subtitle">사전에서 찾은 단어를 직접 기록해 보세요</p>
+      <p class="nav-link">
+        <a href="{{ url_for('index') }}">← 기사 보기</a>
+        · <a href="{{ url_for('vocab_page') }}">단어장</a>
+        · <a href="{{ url_for('quiz_page') }}">퀴즈 풀기 →</a>
+      </p>
+      <button type="button" id="add-word-btn">단어 추가하기</button>
+    </header>
+
+    <main id="content">
+      <ul id="word-list" class="word-list"></ul>
+    </main>
+
+    <script src="{{ url_for('static', filename='my_vocab.js') }}"></script>
+  </body>
+</html>
